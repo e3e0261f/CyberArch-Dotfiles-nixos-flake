@@ -152,11 +152,20 @@ This is my attempt to recreate Cyberpunk 2077 UI entirely on **Hyprland**, using
 
 ## ⌁ Install
 
+Linux
 ```bash
 git clone https://github.com/ARCANGEL0/CyberArch-Dotfiles.git 
 cd CyberArch-Dotfiles 
 chmod +x install.sh
 ./install.sh
+```
+NixOS
+```bash
+# NIXOS直接安装资源
+nix run github:YOURUSER/CyberArch-Dotfiles#themeInstaller
+
+# home-manager 用户
+home-manager switch --flake github:YOURUSER/CyberArch-Dotfiles#default
 ```
 
 The installer will download any required dependencies, install the theme, quickshell and the necessary packages, along with optional features such as fish, GPU Terminals in theme style, and wallpapers. 
