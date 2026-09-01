@@ -62,6 +62,18 @@
               cp -r ${here}/scripts "$out/share/hyprland/themes/cyberarch/scripts" || true
               cp -r ${here}/config "$out/share/hyprland/themes/cyberarch/config" || true
               echo "Installed theme assets to $out/share/hyprland/themes/cyberarch"
+
+              mkdir -p $out/bin
+              cat > $out/bin/cyberarch-hypr-theme <<'EOF'
+              #!/usr/bin/env bash
+              set -euo pipefail
+              # install to $XDG_DATA_HOME or default ~/.local/share
+              target="${XDG_DATA_HOME:-$HOME/.local/share}/hyprland/themes/cyberarch"
+              mkdir -p "$target"
+              cp -r "$0/../share/hyprland/themes/cyberarch/"* "$target/" || true
+              echo "Installed CyberArch theme to $target"
+              EOF
+              chmod +x $out/bin/cyberarch-hypr-theme
             '';
           };
 
