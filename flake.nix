@@ -3,6 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.11";
+    # Pin home-manager to the matching release to avoid API mismatch
     home-manager.url = "github:nix-community/home-manager/release-23.11";
     flake-utils.url = "github:numtide/flake-utils";
   };
@@ -16,40 +17,38 @@
         pkgs = import nixpkgs { inherit system; };
         lib  = pkgs.lib;
 
-        # Build a home-manager configuration object for this system
+        # build the home-manager configuration object
         hm = home-manager.lib.homeManagerConfiguration {
           inherit pkgs;
 
           modules = [
             ({ config, pkgs, ... }: {
-              # Map repo config -> ~/.config/hypr
+              # map repository config -> ~/.config/hypr
               home.file.".config/hypr/".source = "${here}/config";
 
-              # Copy assets & scripts at activation
+              # activation: copy assets & scripts into user share
               home.activation.copy-cyberarch-assets = lib.mkAfter ''
                 mkdir -p $HOME/.local/share/hyprland/themes/cyberarch
                 cp -r ${here}/assets/* $HOME/.local/share/hyprland/themes/cyberarch/ || true
                 cp -r ${here}/scripts $HOME/.local/share/hyprland/themes/cyberarch/scripts || true
-                echo "CyberArch assets copied to ~/.local/share/hyprland/themes/cyberarch"
+                echo "CyberArch assets copied to $HOME/.local/share/hyprland/themes/cyberarch"
               '';
             })
-            ({ config, pkgs, ... }: {
-              home.username = "rhys";             # 必填：目标用户
-              home.homeDirectory = "/home/rhys";  # 可选但推荐
-              home.stateVersion = "23.11";        # 已建议加入，避免其他错误
-            })
 
-            # Ensure home.stateVersion is defined (avoid module merge errors)
+            # minimal required fields for home-manager activation
             ({ config, pkgs, ... }: {
+              home.username = "rhys";            # change to target username if you want
+              home.homeDirectory = "/home/rhys";
               home.stateVersion = "23.11";
             })
           ];
         };
       in {
-        # Per-system packages (theme installer)
-        # ... 在 per-system 的 in { ... } 区块内替换 packages 段为：
-
+        ################################################################
+        # Per-system packages and exports
+        ################################################################
         packages = {
+          # theme installer: copies assets into $out/share and provides an installer in $out/bin
           themeInstaller = pkgs.stdenv.mkDerivation {
             pname = "cyberarch-hypr-theme";
             version = "0.1";
@@ -61,33 +60,43 @@
               cp -r ${here}/assets/* "$out/share/hyprland/themes/cyberarch/" || true
               cp -r ${here}/scripts "$out/share/hyprland/themes/cyberarch/scripts" || true
               cp -r ${here}/config "$out/share/hyprland/themes/cyberarch/config" || true
-              echo "Installed theme assets to $out/share/hyprland/themes/cyberarch"
 
+              # create a small installer script in $out/bin
               mkdir -p $out/bin
               cat > $out/bin/cyberarch-hypr-theme <<'EOF'
-              #!/usr/bin/env bash
-              set -euo pipefail
-              # install to $XDG_DATA_HOME or default ~/.local/share
-              target="${XDG_DATA_HOME:-$HOME/.local/share}/hyprland/themes/cyberarch"
-              mkdir -p "$target"
-              cp -r "$0/../share/hyprland/themes/cyberarch/"* "$target/" || true
-              echo "Installed CyberArch theme to $target"
-              EOF
+#!/usr/bin/env bash
+set -euo pipefail
+# installer: copy theme assets to XDG_DATA_HOME or default to ~/.local/share
+target="${XDG_DATA_HOME:-$HOME/.local/share}/hyprland/themes/cyberarch"
+mkdir -p "$target"
+# copy contents of the package's share dir into target
+pkgshare="$(dirname "$0")/../share/hyprland/themes/cyberarch"
+if [ -d "$pkgshare" ]; then
+  cp -r "$pkgshare/"* "$target/" || true
+  echo "Installed CyberArch theme to $target"
+else
+  echo "Error: package share directory not found: $pkgshare" >&2
+  exit 1
+fi
+EOF
               chmod +x $out/bin/cyberarch-hypr-theme
             '';
           };
 
-          # <-- 关键：导出 activationPackage（derivation）
+          # export activationPackage so home-manager CLI can find it
           homeConfigurations = {
-            default = hm.activationPackage;   # 也可额外添加 `rhys = hm.activationPackage;`
+            default = hm.activationPackage;
           };
         };
-        # Expose the full home-manager object at the top level too (for `nix flake show` consumers)
+
+        ################################################################
+        # Top-level homeConfigurations for `nix flake show` and direct usage
+        ################################################################
         homeConfigurations = {
           default = hm;
         };
 
-        # Default package for `nix run .`
+        # default package for `nix run .`
         defaultPackage = self.packages.${system}.themeInstaller;
       });
 }
