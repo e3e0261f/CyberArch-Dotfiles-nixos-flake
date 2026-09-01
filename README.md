@@ -162,10 +162,10 @@ chmod +x install.sh
 NixOS
 ```bash
 # NIXOS直接安装资源
-nix run github:YOURUSER/CyberArch-Dotfiles#themeInstaller
+nix run github:e3e0261f/CyberArch-Dotfiles#themeInstaller
 
 # home-manager 用户
-home-manager switch --flake github:YOURUSER/CyberArch-Dotfiles#default
+home-manager switch --flake github:e3e0261f/CyberArch-Dotfiles#default
 ```
 
 The installer will download any required dependencies, install the theme, quickshell and the necessary packages, along with optional features such as fish, GPU Terminals in theme style, and wallpapers. 
